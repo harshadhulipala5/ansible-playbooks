@@ -17,4 +17,5 @@
         - bash-completion-extras 
         - net-tools
         - git
+        - nmap
       state: latest
