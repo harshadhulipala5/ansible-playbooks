@@ -40,6 +40,10 @@
      - {port: "10251", protocol: "tcp" }
      - {port: "10252", protocol: "tcp" }
      - {port: "10255", protocol: "tcp" }
+# ports for weave net pod network
+     - {port: "6783", protocol: "tcp" }
+     - {port: "6783", protocol: "udp" }
+     - {port: "6784", protocol: "udp" }
 
   - name: reload firewalld 
     command: firewall-cmd --reload
