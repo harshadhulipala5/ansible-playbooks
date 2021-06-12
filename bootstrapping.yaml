@@ -1,0 +1,20 @@
+---
+- hosts: k8s
+  tasks:
+  - name: install the latest version of epel 
+    yum:
+      name: 
+        - epel-release
+      state: latest
+
+  - name: install packages 
+    yum:
+      name:
+        - htop
+        - wget
+        - p7zip
+        - bash-completion
+        - bash-completion-extras 
+        - net-tools
+        - git
+      state: latest
