@@ -70,3 +70,6 @@
         sed -i '/swap/d' /etc/fstab
         swapoff -a
 
+  - name: Kubectl auto complete
+    shell:
+      cmd: kubectl completion bash >/etc/bash_completion.d/kubectl
