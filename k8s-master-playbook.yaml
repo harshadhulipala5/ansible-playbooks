@@ -10,6 +10,42 @@
       gpgcheck: yes
       enabled: yes
 
+  - name: Disable SeLinux
+    shell:
+      cmd: |
+        setenforce 0
+        sed -i --follow-symlinks 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/sysconfig/selinux
+
+  - name: Disable SWAP
+    shell:
+      cmd: |
+        sed -i '/swap/d' /etc/fstab
+        swapoff -a
+
+  - name: start firewalld service 
+    systemd: state=started name=firewalld
+
+  - name: add ports to firewalld 
+    firewalld:
+      immediate: yes
+      permanent: true
+      state: enabled
+      port: "{{item.port}}/{{item.protocol}}"
+    with_items:
+     - {port: "6443", protocol: "tcp" }
+     - {port: "2379-2380", protocol: "tcp" }
+     - {port: "10250", protocol: "tcp" }
+     - {port: "10251", protocol: "tcp" }
+     - {port: "10252", protocol: "tcp" }
+     - {port: "10255", protocol: "tcp" }
+# ports for calico pod network
+     - {port: "179", protocol: "tcp" } #BGP
+     - {port: "5473", protocol: "tcp" }
+     - {port: "4789", protocol: "udp" }
+
+  - name: reload firewalld 
+    command: firewall-cmd --reload
+
   - name: install the latest version of kudeadm , kubectl and kubelet
     yum:
       name: 
@@ -27,28 +63,6 @@
   - name: start kubelet service 
     systemd: state=started name=kubelet
 
-  - name: add ports to firewalld 
-    firewalld:
-      immediate: yes
-      permanent: true
-      state: enabled
-      port: "{{item.port}}/{{item.protocol}}"
-    with_items:
-     - {port: "6443", protocol: "tcp" }
-     - {port: "2379-2380", protocol: "tcp" }
-     - {port: "10250", protocol: "tcp" }
-     - {port: "10251", protocol: "tcp" }
-     - {port: "10252", protocol: "tcp" }
-     - {port: "10255", protocol: "tcp" }
-# ports for weave net pod network
-     - {port: "6783", protocol: "tcp" }
-     - {port: "6783", protocol: "udp" }
-     - {port: "6784", protocol: "udp" }
-
-  - name: reload firewalld 
-    command: firewall-cmd --reload
-
-
   - name: Updating IP Tables 
     shell:
       cmd: |
@@ -57,18 +71,6 @@
         net.bridge.bridge-nf-call-iptables = 1
         EOF
         sysctl --system
-
-  - name: Disable SeLinux
-    shell:
-      cmd: |
-        setenforce 0
-        sed -i --follow-symlinks 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/sysconfig/selinux
-
-  - name: Disable SWAP
-    shell:
-      cmd: |
-        sed -i '/swap/d' /etc/fstab
-        swapoff -a
 
   - name: Kubectl auto complete
     shell:

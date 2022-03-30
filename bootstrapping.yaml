@@ -18,4 +18,5 @@
         - net-tools
         - git
         - nmap
+        - vim
       state: latest

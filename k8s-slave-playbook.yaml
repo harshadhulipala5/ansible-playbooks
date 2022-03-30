@@ -10,22 +10,33 @@
       gpgcheck: yes
       enabled: yes
 
-  - name: install the latest version of kudeadm , kubectl and kubelet
+  - name: install the latest version of kudeadm and kubelet
     yum:
       name: 
         - kubeadm
         - kubelet
-        - kubectl
       state: latest
 
-  - name: enable kubelet service 
-    systemd:
-      name: kubelet
-      enabled: yes
-      masked: no
- 
-  - name: start kubelet service 
-    systemd: state=started name=kubelet
+  - name: Disable SWAP
+    shell:
+      cmd: |
+        sed -i '/swap/d' /etc/fstab
+        swapoff -a
+
+  - name: Disable SeLinux
+    shell:
+      cmd: |
+        setenforce 0
+        sed -i --follow-symlinks 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/sysconfig/selinux
+
+  - name: Updating IP Tables 
+    shell:
+      cmd: |
+        cat <<EOF > /etc/sysctl.d/k8s.conf
+        net.bridge.bridge-nf-call-ip6tables = 1
+        net.bridge.bridge-nf-call-iptables = 1
+        EOF
+        sysctl --system
 
   - name: add ports to firewalld 
     firewalld:
@@ -38,36 +49,29 @@
      - {port: "10252", protocol: "tcp" }
      - {port: "10255", protocol: "tcp" }
      - {port: "30000-32767", protocol: "tcp" }
-# ports for weave net pod network
-     - {port: "6783", protocol: "tcp" }
-     - {port: "6784", protocol: "tcp" }
-
+     # ports for calico pod network
+     - {port: "179", protocol: "tcp" } #BGP
+     - {port: "5473", protocol: "tcp" }
+     - {port: "4789", protocol: "udp" }
 
   - name: reload firewalld 
     command: firewall-cmd --reload
 
+  - name: enable kubelet service 
+    systemd:
+      name: kubelet
+      enabled: yes
+      masked: no
+ 
+  - name: enable docker service 
+    systemd:
+      name: docker
+      enabled: yes
+      masked: no
 
-  - name: Updating IP Tables 
-    shell:
-      cmd: |
-        cat <<EOF > /etc/sysctl.d/k8s.conf
-        net.bridge.bridge-nf-call-ip6tables = 1
-        net.bridge.bridge-nf-call-iptables = 1
-        EOF
-        sysctl --system
+  - name: start docker service 
+    systemd: state=started name=docker 
 
-  - name: Disable SeLinux
-    shell:
-      cmd: |
-        setenforce 0
-        sed -i --follow-symlinks 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/sysconfig/selinux
+  - name: start kubelet service 
+    systemd: state=started name=kubelet
 
-  - name: Disable SWAP
-    shell:
-      cmd: |
-        sed -i '/swap/d' /etc/fstab
-        swapoff -a
-
-  # - name: Kubectl auto complete
-  #   shell:
-  #     cmd: kubectl completion bash >/etc/bash_completion.d/kubectl
